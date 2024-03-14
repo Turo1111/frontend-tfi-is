@@ -20,13 +20,9 @@ export default function PayCard({open, handleClose, total, confirmSale}) {
         },
         validateOnChange: false,
         onSubmit: (formValue) => {
-          apiClient.post(`/authpay/confirm`, {...formValue, monto: total})
-          .then(r => {
-            if (r) {
-              confirmSale()
-            }
-          })
-          .catch(e=>console.log(e))
+          
+          confirmSale({...formValue, monto: total})
+          
         }
     })
 
@@ -47,3 +43,17 @@ export default function PayCard({open, handleClose, total, confirmSale}) {
     </Modal>
   )
 }
+
+/* {
+  payment_method_id=1, 
+  amount=108.9, 
+  payment_type=single, 
+  sub_payments=[{amount=108.9, installments=null, site_id=}], 
+  installments=1, 
+  bin=450799, 
+  site_transaction_id=ccce7c8c-e90c-46c8-a80b-d088e3eda063, 
+  description=, 
+  currency=ARS, 
+  establishment_name=single, 
+  token=bb270bcb-baa3-4b13-b932-939dbd799c7d
+} */

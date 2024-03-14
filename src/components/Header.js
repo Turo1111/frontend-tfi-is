@@ -1,11 +1,15 @@
+import { useRouter } from 'next/navigation'
 import React from 'react'
 import { MdArrowBack } from 'react-icons/md'
 import styled from 'styled-components'
 
 export default function Header({title}) {
+
+    const router = useRouter()
+
   return (
     <Container>
-        <ButtonBack>
+        <ButtonBack onClick={()=>router.back()} >
             <MdArrowBack style={{fontSize: 18, marginRight: 15}}/>
             <h2 style={{fontSize: 18}}>Volver</h2>
         </ButtonBack>

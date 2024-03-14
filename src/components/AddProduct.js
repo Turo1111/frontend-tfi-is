@@ -5,45 +5,56 @@ import InputSelect from '@/components/InputSelect'
 import Modal from './Modal'
 import { useFormik } from 'formik'
 import apiClient from '@/utils/client'
+import { setAlert } from '@/redux/alertSlice'
+import { useAppDispatch } from '@/redux/hook'
 
 export default function AddProduct({open, handleClose, product, addProductLV}) {
 
-    const [stocks, setStocks] = useState([])
-    const [stock, setStock] = useState(undefined)
+    const [stockDisponible, setStockDisponible] = useState([])
+    const dispatch = useAppDispatch();
     
-    const [selectTalle, setSelectTalle] = useState({
-        id: 0,
-        descripcion: ''
-    })
-    const [selectColor, setSelectColor] = useState({
-        id: 0,
-        descripcion: ''
-    })
-
     const formik = useFormik({
       initialValues: {
-        cantidad: 1
+        cantidad: 1,
+        total: 0,
+        stock: {
+          id: 0,
+          descripcion: ''
+        }
       },
       validateOnChange: false,
       onSubmit: (formValue) => {
-        if(!stock || stock.cantidad < formValue.cantidad){
-          return console.log("faltan seleccionar datos")
+        if(!stockDisponible || formValue.stock.cantidad < parseFloat(formValue.cantidad) || formValue.stock.id === 0){
+          dispatch(setAlert({
+            message: 'Stock no disponible',
+            type: 'warning'
+          }))
+          return
         }
-        const lv = {
-          idStock: stock.id,
-          descripcion: product.descripcion,
+        const lv = {...formValue, 
+          total: formValue.cantidad*product.precioVenta,
           precioVenta: product.precioVenta,
-          cantidad: formValue.cantidad,
-          subTotal: (formValue.cantidad * product.precioVenta).toFixed(2),
-          total: (formValue.cantidad * product.precioVenta).toFixed(2),
+          descripcion: product.descripcion
         }
-        return addProductLV(lv)
+        formik.handleReset()
+        setStockDisponible([])
+        return addProductLV(lv) 
       }
     })
 
     const getStock = (codigo) => {
         apiClient(`/stock/getStock/${codigo}`)
-        .then(r=>setStocks(r.data))
+        .then(r=>{
+          r.data.map(item=>{
+            setStockDisponible(prevData => {
+              const exist = prevData.find(e=>e.id===item.id)
+              if (exist) {
+                return prevData
+              }
+              return [...prevData, {...item, descripcion: `Talle: ${item.talle.descripcion} Color: ${item.color.descripcion} ${item.cantidad} unidades disponibles`}]
+            })
+          })
+        })
         .catch(e=>console.log(e))
     }
 
@@ -53,38 +64,17 @@ export default function AddProduct({open, handleClose, product, addProductLV}) {
         }
     },[product])
 
-    useEffect(()=>{
-
-        if (selectColor.id !== 0 && selectTalle.id !== 0) {
-            const s = stocks.find(elem => elem.talle.id === selectTalle.id && elem.color.id === selectColor.id )
-            console.log(s)
-            if (s) {
-              return setStock(s)
-            }
-            return setStock(undefined)
-        }
-        
-    },[stocks, selectColor, selectTalle])
 
 
   return (
-    <Modal title={'Agregar producto'} eClose={handleClose} open={open} height='58%' >
+    <Modal title={'Agregar producto'} eClose={handleClose} open={open} height='48%' >
     <div style={{padding: '15px 0'}}>
         <Input label={'Descripcion'} name={'descripcion'} value={product.descripcion}  readOnly={true}/>
         <Input label={'Marca'} name={'marca'} value={product.marca.descripcion} readOnly={true}/>
         <Input label={'Categoria'} name={'categoria'} value={product.categoria.descripcion} readOnly={true}/>
-        <InputSelect label={'Talla'} preData={product.talle} type='text' name='roles' value={selectTalle.descripcion}  onChange={(id, item)=>{
-            console.log(item)
-          setSelectTalle({id: item.id, descripcion: item.descripcion})
+        <InputSelect label={'Talla y color'} preData={stockDisponible} type='text' name='roles' value={formik.values.stock.descripcion}  onChange={(id, item)=>{
+          formik.setFieldValue('stock', item)
         }} />
-        <InputSelect label={'Color'} preData={product.color} type='text' name='color' value={selectColor.descripcion}  onChange={(id, item)=>{
-          setSelectColor({id: item.id, descripcion: item.descripcion})
-        }} />
-        { stock && 
-          stock.cantidad > 1 ? <h2 style={{fontSize: 16, color: `${process.env.TEXT_COLOR}`, margin: '15px 0'}} >{stock.cantidad} articulos disponibles</h2>
-          :
-          <h2 style={{fontSize: 16, color: `${process.env.TEXT_COLOR}`, margin: '15px 0'}} >Articulo sin stock disponible</h2>
-        }
         <Input label={'Cantidad'} name={'cantidad'} type='number' value={formik.values.cantidad} onChange={(e)=>{
             const value = e.target.value
             if(value>=1)formik.setFieldValue('cantidad', value)

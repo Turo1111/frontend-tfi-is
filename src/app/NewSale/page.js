@@ -2,12 +2,15 @@
 import AddProduct from '@/components/AddProduct'
 import AlertConfirm from '@/components/AlertConfirm'
 import Button from '@/components/Button'
+import Comprobante from '@/components/Comprobante'
 import ConfirmSale from '@/components/ConfirmSale'
 import Header from '@/components/Header'
 import Input from '@/components/Input'
 import InputSearch from '@/components/InputSearch'
 import InputSelect from '@/components/InputSelect'
 import PayCard from '@/components/PayCard'
+import { setAlert } from '@/redux/alertSlice'
+import { useAppDispatch } from '@/redux/hook'
 import apiClient from '@/utils/client'
 import axios from 'axios'
 import { useFormik } from 'formik'
@@ -28,8 +31,9 @@ export default function NewSale() {
     const router = useRouter()
     const [openAlertSuccess, setOpenAlertSuccess] = useState(false)
     const fecha = new Date()
-
-    console.log(fecha);
+    const dispatch = useAppDispatch();
+    const [venta, setVenta] = useState(undefined)
+    const [openComprobante, setOpenComprobante] = useState(false)
 
     const formik = useFormik({
         initialValues: {
@@ -40,20 +44,32 @@ export default function NewSale() {
             const {search} = formValue
             apiClient.get(`/articulo/find/${search}`)
             .then((r)=>{
+                console.log(r.data)
+                if (r.data === null) {
+                    dispatch(setAlert({
+                        message: 'Codigo invalido o producto no existente',
+                        type: 'error'
+                    }))
+                }
                 setProductSelected(r.data)
                 setOpenAddProduct(true)
             })
-            .catch(e=>console.log(e))
+            .catch(e=>{
+                console.log(e)
+            })
         }
     })
 
     const addProductLV = (lv) => {
-        const exist = lineaVenta.some(elem => elem.idStock === lv.idStock )
+        const exist = lineaVenta.some(elem => elem.stock.id === lv.stock.id)
         if (!exist) {
             setLineaVenta(prevData=>[...prevData, lv])
             setOpenAddProduct(false)
         }else{
-            console.log('producto ya existente')
+            dispatch(setAlert({
+                message: 'Producto ya existente',
+                type: 'warning'
+            }))
         }
     }
 
@@ -62,40 +78,64 @@ export default function NewSale() {
             (accumulator, currentValue) => parseFloat(accumulator) + parseFloat(currentValue.total),
             0,
         );
-        const sumSubTotal = lineaVenta.reduce(
-            (accumulator, currentValue) => parseFloat(accumulator) + parseFloat(currentValue.subTotal),
-            0,
-        );
-        setSubTotal(sumSubTotal)
         setTotal(sumTotal)
     },[lineaVenta])
 
-    const confirmSale = () => {
+    const confirmSale = (payCard) => {
+        let pago
+        if (payCard) {
+            pago = {
+                tipoPago: "TarjetaDebito",
+                fecha: fecha,
+                monto: total,
+                pagoTarjeta: {...payCard}
+
+            }
+        } else {
+            pago = {
+                tipoPago: "Efectivo",
+                fecha: fecha,
+                monto: total
+            }
+        }
+
         const venta = {
             lineaVenta: lineaVenta,
             total: total,
-            fecha: fecha
+            fecha: fecha,
+            pago: pago
+        }
+        console.log(venta);
+        setVenta(venta)
+        if (total <= 0) {
+            dispatch(setAlert({
+                message: 'Sin productos agregados',
+                type: 'warning'
+            }))
+            return
         }
         apiClient.post('/venta/save', venta)
         .then(r=>{
             setOpenConfirmSale(false)
             setOpenPayCard(false)
-            setOpenAlertSuccess(true)
+            dispatch(setAlert({
+                message: 'Venta realizada correctamente',
+                type: 'success'
+            }))
             setTimeout(() => {
-                router.push('/Home')
-            }, 5000);
+                setOpenComprobante(true)
+            }, 1000);
         })
-        .catch(e=>console.log(e))
+        .catch(e=>{
+            dispatch(setAlert({
+                message: 'La venta no pudo realizarse',
+                type: 'error'
+            }))
+            console.log(e)
+        })
     }
 
-    useEffect(()=>{
-        if (openAlertSuccess) {
-            setTimeout(() => {
-                setOpenAlertSuccess(false)
-            }, 5000);
-        }
-    },[openAlertSuccess])
-
+    
   return (
     <div style={{margin: '0 20%', height: '100vh', display: 'flex', flexDirection: 'column'}}>
         <Header title={'Realizar venta'} />
@@ -109,7 +149,6 @@ export default function NewSale() {
                     <h2 style={{fontSize: 14, color: `${process.env.TEXT_COLOR}`}} >Descripcion del producto</h2>
                     <h2 style={{fontSize: 14, color: `${process.env.TEXT_COLOR}`}} >Precio Venta</h2>
                     <h2 style={{fontSize: 14, color: `${process.env.TEXT_COLOR}`}} >Cantidad</h2>
-                    <h2 style={{fontSize: 14, color: `${process.env.TEXT_COLOR}`}} >Sub-Total</h2>
                     <h2 style={{fontSize: 14, color: `${process.env.TEXT_COLOR}`}} >Total</h2>
                 </li>
                 {
@@ -121,15 +160,15 @@ export default function NewSale() {
                             <h2 style={{fontSize: 14, color: `${process.env.TEXT_COLOR}`}} >{item.descripcion}</h2>
                             <h2 style={{fontSize: 14, color: `${process.env.TEXT_COLOR}`}} >$ {item.precioVenta}</h2>
                             <h2 style={{fontSize: 14, color: `${process.env.TEXT_COLOR}`}} >{item.cantidad}</h2>
-                            <h2 style={{fontSize: 14, color: `${process.env.TEXT_COLOR}`}} >$ {item.subTotal}</h2>
                             <h2 style={{fontSize: 14, color: `${process.env.TEXT_COLOR}`}} >$ {item.total}</h2>
                         </li>
                     )
                 }
             </ul>
-            <h2 style={{fontSize: 14, color: `${process.env.TEXT_COLOR}`, textAlign: 'end', margin: '10px 0'}}>Sub-Total: ${subTotal}</h2>
             <h2 style={{fontSize: 14, color: `${process.env.TEXT_COLOR}`, textAlign: 'end', margin: '10px 0'}}>Total: ${total}</h2>
-            <InputSelect label={'Metodo de pago'} preData={payment} type='text' name='metodoPago' onChange={(id, item)=>setMethodPayment(item)} value={methodPayment}/>
+            <InputSelect label={'Metodo de pago'} preData={payment} type='text' name='metodoPago' onChange={(id, item)=>{
+                setMethodPayment(item)
+            }}/>
             <div style={{display: 'flex', margin: '5px 0', justifyContent: 'space-evenly'}}>
                 <Button text={'Cancelar'} onClick={()=>setOpenAlertConfirm(true)} />
                 <Button text={'Confirmar'} onClick={()=>{
@@ -139,7 +178,11 @@ export default function NewSale() {
                         }
                         return setOpenConfirmSale(true)
                     }
-                    console.log('necesito hacer una funcion para esto')
+                    dispatch(setAlert({
+                        message: 'Debe seleccionar metodo de pago',
+                        type: 'warning'
+                    }))
+                    return
                 }} />
             </div>
         </div>
@@ -153,7 +196,7 @@ export default function NewSale() {
         }
         {
             (methodPayment && methodPayment.id === 1) && 
-            <ConfirmSale open={openConfirmSale} handleClose={()=>setOpenConfirmSale(false)} />
+            <ConfirmSale open={openConfirmSale} handleClose={()=>setOpenConfirmSale(false)} total={total} confirmSale={confirmSale} />
         }
         {
             (methodPayment && methodPayment.id === 2) && 
@@ -164,6 +207,10 @@ export default function NewSale() {
             <div style={{backgroundColor: '#fff', position: 'absolute', padding: 15, borderRadius: 5, boxShadow: '1px 1px 20px #d9d9d9'}} >
                 <h2 style={{fontSize: 14, color: `${process.env.GREEN_ALERT}`}} >VENTA CREADA CORRECTAMENTE</h2>
             </div>
+        }
+        {
+            venta &&
+            <Comprobante {...venta} open={openComprobante} handleClose={()=>{setOpenComprobante(false);router.push('/Home')}} />
         }
     </div>
   )
@@ -176,6 +223,10 @@ const payment = [
     },
     {
         id: 2,
-        descripcion: 'Tarjeta'
+        descripcion: 'Tarjeta Debito'
+    },
+    {
+        id: 3,
+        descripcion: 'Tarjeta Credito'
     }
 ]

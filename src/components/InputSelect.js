@@ -27,7 +27,7 @@ const InputLabel = styled.label`
   ${({ active }) =>
     active &&
     `
-    transform: translateY(-32px) scale(0.8);
+    transform: translateY(-26px) scale(0.8);
   `}
 `;
 
@@ -123,7 +123,6 @@ const InputSelect = ({e='Hubo un problema',condicion=true ,type = 'text', label,
   };
 
   const addValue = (item) => {
-    console.log("add", item.descripcion)
     onChange(item._id, item)
     setInputValue(item.descripcion)
     setOpenList(false)
@@ -183,8 +182,8 @@ const InputSelect = ({e='Hubo un problema',condicion=true ,type = 'text', label,
               :
                 <>
                   {
-                      data.length === 0 ? 'Vacio' : 
-                      data.map((item, index)=> <ItemModal key={index} color={process.env.TEXT_COLOR} onClick={()=>addValue(item)} >{item.descripcion}</ItemModal>)
+                      preData.length === 0 ? 'Vacio' : 
+                      preData.map((item, index)=> <ItemModal key={index} color={process.env.TEXT_COLOR} onClick={()=>addValue(item)} >{item.descripcion}</ItemModal>)
                   }
                 </>
               }

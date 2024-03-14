@@ -4,7 +4,7 @@ import Input from "@/components/Input";
 import Loading from "@/components/Loading";
 import { useFormik } from "formik";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styled from "styled-components"
 
 export default function Home() {
@@ -19,10 +19,13 @@ export default function Home() {
     },
     validateOnChange: false,
     onSubmit: (formValue) => {
-      console.log(formValue)
       router.push('/Home')
     }
   })
+
+  useEffect(()=>{
+    router.push('/Home')
+  },[])
 
 
   return (
