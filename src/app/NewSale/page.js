@@ -8,6 +8,7 @@ import Header from '@/components/Header'
 import Input from '@/components/Input'
 import InputSearch from '@/components/InputSearch'
 import InputSelect from '@/components/InputSelect'
+import NewCliente from '@/components/NewCliente'
 import PayCard from '@/components/PayCard'
 import { setAlert } from '@/redux/alertSlice'
 import { useAppDispatch } from '@/redux/hook'
@@ -34,6 +35,12 @@ export default function NewSale() {
     const dispatch = useAppDispatch();
     const [venta, setVenta] = useState(undefined)
     const [openComprobante, setOpenComprobante] = useState(false)
+    const [openNewCliente, setOpenNewCliente] = useState(false)
+    const [cliente, setCliente] = useState({
+        nombre: 'Anonimo',
+        cuit: '0',
+        domicilio: ''
+    })
 
     const formik = useFormik({
         initialValues: {
@@ -103,7 +110,8 @@ export default function NewSale() {
             lineaVenta: lineaVenta,
             total: total,
             fecha: fecha,
-            pago: pago
+            pago: pago,
+            cliente: cliente
         }
         console.log(venta);
         setVenta(venta)
@@ -133,6 +141,23 @@ export default function NewSale() {
             }))
             console.log(e)
         })
+    }
+
+    const abrirMetodoPago = (cliente)=>{
+        console.log("cliente",cliente)
+        setCliente(cliente)
+        if(methodPayment){
+            if(methodPayment.id === 2){
+                return setOpenPayCard(true)
+            }
+            return setOpenConfirmSale(true)
+        }
+        
+        dispatch(setAlert({
+            message: 'Debe seleccionar metodo de pago',
+            type: 'warning'
+        }))
+        return
     }
 
     
@@ -172,17 +197,11 @@ export default function NewSale() {
             <div style={{display: 'flex', margin: '5px 0', justifyContent: 'space-evenly'}}>
                 <Button text={'Cancelar'} onClick={()=>setOpenAlertConfirm(true)} />
                 <Button text={'Confirmar'} onClick={()=>{
-                    if(methodPayment){
-                        if(methodPayment.id === 2){
-                            return setOpenPayCard(true)
-                        }
-                        return setOpenConfirmSale(true)
+                    console.log(total >= 10000)
+                    if (total >= 10000) {
+                        return setOpenNewCliente(true)
                     }
-                    dispatch(setAlert({
-                        message: 'Debe seleccionar metodo de pago',
-                        type: 'warning'
-                    }))
-                    return
+                    abrirMetodoPago()
                 }} />
             </div>
         </div>
@@ -193,6 +212,10 @@ export default function NewSale() {
                 setOpenAddProduct(false)
                 formik.handleReset()
             }} product={productSelected} addProductLV={addProductLV} />
+        }
+        {
+            openNewCliente &&
+            <NewCliente open={openNewCliente} handleClose={()=>setOpenNewCliente(false)} confirm={abrirMetodoPago} />
         }
         {
             (methodPayment && methodPayment.id === 1) && 
@@ -210,8 +233,9 @@ export default function NewSale() {
         }
         {
             venta &&
-            <Comprobante {...venta} open={openComprobante} handleClose={()=>{setOpenComprobante(false);router.push('/Home')}} />
+            <Comprobante {...venta} open={openComprobante} handleClose={()=>{setOpenComprobante(false);router.push('/Home')}}  />
         }
+        
     </div>
   )
 }

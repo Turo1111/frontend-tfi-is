@@ -16,10 +16,12 @@ export default function Comprobante({
 
     const { date: fechaDate } = useDate(fecha);
 
+    console.log(cliente)
+
   return (
     <Modal title={'Comprobante'} eClose={handleClose} open={open} height='auto' width='50%'>
       <div>
-        <Tag>CLIENTE : {cliente ? cliente : 'Consumidor final'}</Tag>
+        <Tag>CLIENTE : {cliente ? cliente.nombre : 'Anonimo'}</Tag>
         <Tag>FECHA : {fechaDate}</Tag>
         <Tag>TIPO DE PAGO : {pago.tipoPago}</Tag>
       </div>
